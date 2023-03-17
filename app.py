@@ -245,6 +245,7 @@ def create_training():
                         create_radio('prior_generation_precision', ['no', 'fp32', 'fp16', 'bf16'], value="no")
                     with gr.Column():
                         create_checkbox('use_8bit_adam', False)
+                        create_checkbox('enable_xformers_memory_efficient_attention', False)
 
     button_start.click(
         fn=do_train,
