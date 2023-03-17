@@ -12,33 +12,23 @@ working_dir = path.dirname(__file__)
 
 cache_file = path.join(working_dir, "config.cache.json")
 
-CACHED = {}
-
-BLOCKS = []
+INPUTS = []
 
 T = TypeVar("T")
 
 
-def load_config_cache():
-    if path.exists(cache_file):
-        with open(cache_file) as f:
-            data: dict = json.load(f)
-            for k, v in data.items():
-                CACHED[k] = v
-
-
-def save_config_cache():
+def save_config_cache(data):
     with open(cache_file, 'w') as f:
-        json.dump(CACHED, f)
+        json.dump(data, f)
 
 
-def preload_value(name, kwargs):
-    if name in CACHED:
-        kwargs['value'] = CACHED[name]
+def load_config_cache() -> dict:
+    with open(cache_file) as f:
+        return json.load(f)
 
 
 def register_input(name, block: T) -> T:
-    BLOCKS.append({
+    INPUTS.append({
         'name': name,
         'block': block,
     })
@@ -46,11 +36,11 @@ def register_input(name, block: T) -> T:
 
 
 def extract_input_names() -> List[str]:
-    return [item['name'] for item in BLOCKS]
+    return [item['name'] for item in INPUTS]
 
 
 def extract_inputs() -> List[any]:
-    return [item['block'] for item in BLOCKS]
+    return [item['block'] for item in INPUTS]
 
 
 def extract_input_values(*args) -> Dict[str, any]:
@@ -59,7 +49,6 @@ def extract_input_values(*args) -> Dict[str, any]:
 
 
 def create_textbox(name: str, **kwargs) -> gr.Textbox:
-    preload_value(name, kwargs)
     kwargs['label'] = name.replace('_', ' ').capitalize()
     if 'max_lines' not in kwargs:
         kwargs['max_lines'] = 1
@@ -69,7 +58,6 @@ def create_textbox(name: str, **kwargs) -> gr.Textbox:
 
 
 def create_files(name: str, **kwargs) -> gr.Files:
-    preload_value(name, kwargs)
     kwargs['label'] = name.replace('_', ' ').capitalize()
     if 'interactive' not in kwargs:
         kwargs['interactive'] = True
@@ -77,7 +65,6 @@ def create_files(name: str, **kwargs) -> gr.Files:
 
 
 def create_radio(name: str, choices: List[str], **kwargs) -> gr.Radio:
-    preload_value(name, kwargs)
     kwargs['label'] = name.replace('_', ' ').capitalize()
     if 'choices' not in kwargs:
         kwargs['choices'] = choices
@@ -87,7 +74,6 @@ def create_radio(name: str, choices: List[str], **kwargs) -> gr.Radio:
 
 
 def create_checkbox(name: str, value: bool, **kwargs) -> gr.Checkbox:
-    preload_value(name, kwargs)
     kwargs['label'] = name.replace('_', ' ').capitalize()
     if 'interactive' not in kwargs:
         kwargs['interactive'] = True
@@ -97,7 +83,6 @@ def create_checkbox(name: str, value: bool, **kwargs) -> gr.Checkbox:
 
 
 def create_number(name: str, value: any, **kwargs) -> gr.Number:
-    preload_value(name, kwargs)
     kwargs['label'] = name.replace('_', ' ').capitalize()
     if 'value' not in kwargs:
         kwargs['value'] = value
@@ -106,15 +91,31 @@ def create_number(name: str, value: any, **kwargs) -> gr.Number:
     return register_input(name, gr.Number(**kwargs))
 
 
+def do_load(*args):
+    data = load_config_cache()
+
+    ret = []
+
+    for item in INPUTS:
+        if item['name'] in data:
+            ret.append(data[item['name']])
+        else:
+            ret.append(item['block'].value)
+
+    return ret
+
+
 def do_train(*args):
     arg_train = [
         "accelerate",
         "launch",
         path.join(path.dirname(__file__), "scripts", "train_dreambooth_lora.py")
     ]
+
     values = extract_input_values(*args)
+    save_config_cache(values)
+
     for key, val in values.items():
-        CACHED[key] = val
         if val:
             if val is True:
                 arg_train.append('--' + key)
@@ -125,8 +126,6 @@ def do_train(*args):
             if val == 0 and val is not False:
                 arg_train.append('--' + key)
                 arg_train.append(str(val))
-
-    save_config_cache()
 
     subprocess.run(arg_train, check=True)
 
@@ -182,7 +181,9 @@ def create_training():
                     )
 
             with gr.Box():
-                button_start = gr.Button("Start")
+                with gr.Row():
+                    button_start = gr.Button("Start")
+                    button_load = gr.Button("Load")
 
             with gr.Box():
                 gr.Markdown('Output message')
@@ -284,6 +285,11 @@ def create_training():
         outputs=output_message
     )
 
+    button_load.click(
+        fn=do_load,
+        outputs=extract_inputs(),
+    )
+
 
 def create_app() -> gr.Blocks:
     with gr.Blocks(
@@ -297,7 +303,6 @@ def create_app() -> gr.Blocks:
 
 
 def main():
-    load_config_cache()
     app = create_app()
     app.queue(max_size=1).launch(share=True)
 
