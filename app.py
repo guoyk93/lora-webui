@@ -82,7 +82,7 @@ def do_train(*args):
     arg_train = [
         "accelerate",
         "launch",
-        path.join(path.dirname(__file__), "src", "train_dreambooth_lora.py")
+        path.join(path.dirname(__file__), "scripts", "train_dreambooth_lora.py")
     ]
     values = extract_input_values(*args)
     for key, val in values.items():
@@ -101,7 +101,7 @@ def do_train(*args):
 
     arg_convert = [
         "python",
-        path.join(path.dirname(__file__), "src", "diffusers-lora-to-safetensors.py"),
+        path.join(path.dirname(__file__), "scripts", "diffusers-lora-to-safetensors.py"),
         "--file",
         path.join(values['output_dir'], 'pytorch_lora_weights.bin')
     ]
