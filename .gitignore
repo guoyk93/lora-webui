@@ -134,3 +134,4 @@ dmypy.json
 # Assets Directories
 /src
 /out
+/config.cache.json

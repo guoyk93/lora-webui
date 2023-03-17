@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import json
 import subprocess
 from os import path
 from typing import List, TypeVar, Dict
@@ -9,9 +10,31 @@ TITLE = "DreamBooth LoRA WebUI"
 
 working_dir = path.dirname(__file__)
 
+cache_file = path.join(working_dir, "config.cache.json")
+
+CACHED = {}
+
 BLOCKS = []
 
 T = TypeVar("T")
+
+
+def load_config_cache():
+    if path.exists(cache_file):
+        with open(cache_file) as f:
+            data: dict = json.load(f)
+            for k, v in data.items():
+                CACHED[k] = v
+
+
+def save_config_cache():
+    with open(cache_file, 'w') as f:
+        json.dump(CACHED, f)
+
+
+def preload_value(name, kwargs):
+    if name in CACHED:
+        kwargs['value'] = CACHED[name]
 
 
 def register_input(name, block: T) -> T:
@@ -36,6 +59,7 @@ def extract_input_values(*args) -> Dict[str, any]:
 
 
 def create_textbox(name: str, **kwargs) -> gr.Textbox:
+    preload_value(name, kwargs)
     kwargs['label'] = name.replace('_', ' ').capitalize()
     if 'max_lines' not in kwargs:
         kwargs['max_lines'] = 1
@@ -45,6 +69,7 @@ def create_textbox(name: str, **kwargs) -> gr.Textbox:
 
 
 def create_files(name: str, **kwargs) -> gr.Files:
+    preload_value(name, kwargs)
     kwargs['label'] = name.replace('_', ' ').capitalize()
     if 'interactive' not in kwargs:
         kwargs['interactive'] = True
@@ -52,6 +77,7 @@ def create_files(name: str, **kwargs) -> gr.Files:
 
 
 def create_radio(name: str, choices: List[str], **kwargs) -> gr.Radio:
+    preload_value(name, kwargs)
     kwargs['label'] = name.replace('_', ' ').capitalize()
     if 'choices' not in kwargs:
         kwargs['choices'] = choices
@@ -61,6 +87,7 @@ def create_radio(name: str, choices: List[str], **kwargs) -> gr.Radio:
 
 
 def create_checkbox(name: str, value: bool, **kwargs) -> gr.Checkbox:
+    preload_value(name, kwargs)
     kwargs['label'] = name.replace('_', ' ').capitalize()
     if 'interactive' not in kwargs:
         kwargs['interactive'] = True
@@ -70,6 +97,7 @@ def create_checkbox(name: str, value: bool, **kwargs) -> gr.Checkbox:
 
 
 def create_number(name: str, value: any, **kwargs) -> gr.Number:
+    preload_value(name, kwargs)
     kwargs['label'] = name.replace('_', ' ').capitalize()
     if 'value' not in kwargs:
         kwargs['value'] = value
@@ -86,6 +114,7 @@ def do_train(*args):
     ]
     values = extract_input_values(*args)
     for key, val in values.items():
+        CACHED[key] = val
         if val:
             if val is True:
                 arg_train.append('--' + key)
@@ -96,6 +125,8 @@ def do_train(*args):
             if val == 0 and val is not False:
                 arg_train.append('--' + key)
                 arg_train.append(str(val))
+
+    save_config_cache()
 
     subprocess.run(arg_train, check=True)
 
@@ -266,6 +297,7 @@ def create_app() -> gr.Blocks:
 
 
 def main():
+    load_config_cache()
     app = create_app()
     app.queue(max_size=1).launch(share=True)
 
