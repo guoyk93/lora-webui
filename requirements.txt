@@ -1,0 +1,10 @@
+diffusers[torch]==0.14.0
+safetensors==0.3.0
+accelerate==0.17.1
+gradio==3.21.0
+accelerate
+torchvision
+transformers>=4.25.1
+ftfy
+tensorboard
+Jinja2
