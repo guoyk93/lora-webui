@@ -23,6 +23,8 @@ def save_config_cache(data):
 
 
 def load_config_cache() -> dict:
+    if not path.exists(cache_file):
+        return {}
     with open(cache_file) as f:
         return json.load(f)
 
