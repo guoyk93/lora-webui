@@ -216,7 +216,7 @@ def create_training():
                         'learning_rate', 0.0001
                     )
                     create_number(
-                        'lr_warmup_steps', 500,
+                        'lr_warmup_steps', 200,
                         precision=0,
                     )
 
@@ -241,11 +241,11 @@ def create_training():
 
                 with gr.Row():
                     with gr.Column():
-                        create_radio('mixed_precision', ['no', 'fp16', 'bf16'], value="no")
-                        create_radio('prior_generation_precision', ['no', 'fp32', 'fp16', 'bf16'], value="no")
+                        create_radio('mixed_precision', ['no', 'fp16', 'bf16'], value="fp16")
+                        create_radio('prior_generation_precision', ['no', 'fp32', 'fp16', 'bf16'], value="fp16")
                     with gr.Column():
                         create_checkbox('use_8bit_adam', False)
-                        create_checkbox('enable_xformers_memory_efficient_attention', False)
+                        create_checkbox('enable_xformers_memory_efficient_attention', True)
 
     button_start.click(
         fn=do_train,
