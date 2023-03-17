@@ -97,7 +97,7 @@ def do_train(*args):
                 arg_train.append('--' + key)
                 arg_train.append(str(val))
 
-    subprocess.run(arg_train)
+    subprocess.run(arg_train, check=True)
 
     arg_convert = [
         "python",
@@ -106,7 +106,7 @@ def do_train(*args):
         path.join(values['output_dir'], 'pytorch_lora_weights.bin')
     ]
 
-    subprocess.run(arg_convert)
+    subprocess.run(arg_convert, check=True)
 
     return 'Complete, check: ' + path.join(values['output_dir'], 'pytorch_lora_weights_converted.safetensors')
 
