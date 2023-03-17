@@ -139,7 +139,7 @@ def do_train(*args):
 
     subprocess.run(arg_convert, check=True)
 
-    return 'Complete, check: ' + path.join(values['output_dir'], 'pytorch_lora_weights_converted.safetensors')
+    return 'Complete\n\nCheck: ' + path.join(values['output_dir'], 'pytorch_lora_weights_converted.safetensors')
 
 
 def create_training():
