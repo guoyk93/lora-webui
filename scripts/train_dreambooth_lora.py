@@ -52,7 +52,6 @@ from diffusers.optimization import get_scheduler
 from diffusers.utils import check_min_version, is_wandb_available
 from diffusers.utils.import_utils import is_xformers_available
 
-
 # Will error if the minimal version of diffusers is not installed. Remove at your own risks.
 check_min_version("0.14.0")
 
@@ -111,6 +110,12 @@ def import_model_class_from_model_name_or_path(pretrained_model_name_or_path: st
 
 def parse_args(input_args=None):
     parser = argparse.ArgumentParser(description="Simple example of a training script.")
+    parser.add_argument(
+        "--progress_file",
+        type=str,
+        default=None,
+        help="Path to progress file, will write in format '0.3,Current Job'"
+    )
     parser.add_argument(
         "--pretrained_model_name_or_path",
         type=str,
@@ -411,14 +416,14 @@ class DreamBoothDataset(Dataset):
     """
 
     def __init__(
-        self,
-        instance_data_root,
-        instance_prompt,
-        tokenizer,
-        class_data_root=None,
-        class_prompt=None,
-        size=512,
-        center_crop=False,
+            self,
+            instance_data_root,
+            instance_prompt,
+            tokenizer,
+            class_data_root=None,
+            class_prompt=None,
+            size=512,
+            center_crop=False,
     ):
         self.size = size
         self.center_crop = center_crop
@@ -606,7 +611,7 @@ def main(args):
             pipeline.to(accelerator.device)
 
             for example in tqdm(
-                sample_dataloader, desc="Generating class images", disable=not accelerator.is_local_main_process
+                    sample_dataloader, desc="Generating class images", disable=not accelerator.is_local_main_process
             ):
                 images = pipeline(example["prompt"]).images
 
@@ -730,7 +735,7 @@ def main(args):
 
     if args.scale_lr:
         args.learning_rate = (
-            args.learning_rate * args.gradient_accumulation_steps * args.train_batch_size * accelerator.num_processes
+                args.learning_rate * args.gradient_accumulation_steps * args.train_batch_size * accelerator.num_processes
         )
 
     # Enable TF32 for faster training on Ampere GPUs,
@@ -740,7 +745,7 @@ def main(args):
 
     if args.scale_lr:
         args.learning_rate = (
-            args.learning_rate * args.gradient_accumulation_steps * args.train_batch_size * accelerator.num_processes
+                args.learning_rate * args.gradient_accumulation_steps * args.train_batch_size * accelerator.num_processes
         )
 
     # Use 8-bit Adam for lower memory usage or to fine-tune the model in 16GB GPUs

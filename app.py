@@ -1,7 +1,13 @@
 #!/usr/bin/env python
 import json
+import os
 import subprocess
+import tempfile
+import threading
+import time
 from os import path
+from pathlib import Path
+from shutil import rmtree
 from typing import List, TypeVar, Dict
 
 import gradio as gr
@@ -142,18 +148,43 @@ def do_train(*args, progress=gr.Progress()):
                 arg_train.append('--' + key)
                 arg_train.append(str(val))
 
-    progress(0.1, "Training")
+    prg_path = tempfile.mktemp(suffix="train_dreambooth_lora.progress")
+    Path(prg_path).write_text('0.01, Starting')
 
-    subprocess.run(arg_train, check=True)
+    arg_train.append("--progress_file")
+    arg_train.append(prg_path)
+
+    def show_progress(_prg_path, _progress):
+        p = Path(_prg_path)
+        while True:
+            if not path.exists(_prg_path):
+                return
+            try:
+                content = p.read_text().strip()
+                v1, v2 = content.split(',', 2)
+                _progress(float(v1.strip()) * 0.8 + 0.1, v2.strip())
+            except ValueError:
+                pass
+            time.sleep(1)
+
+    progress(0.1, "Training")
+    threading.Thread(target=show_progress, args=(prg_path, progress)).start()
+
+    try:
+        subprocess.run(arg_train, check=True)
+    except subprocess.CalledProcessError as e:
+        return str(e)
+    finally:
+        os.remove(prg_path)
 
     progress(0.9, "Converting to .safetensors")
 
-    convert_lora_file_to_safetensors(
-        path.join(values['output_dir'], 'pytorch_lora_weights.bin'),
-        path.join(values['output_dir'], 'lora.safetensors'),
-    )
+    convert_input = path.join(values['output_dir'], 'pytorch_lora_weights.bin')
+    convert_output = path.join(values['output_dir'], 'lora.safetensors')
 
-    return 'Done, check `lora.safetensors` at `output_dir`'
+    convert_lora_file_to_safetensors(convert_input, convert_output)
+
+    return f'\n\nCompleted:\n\n{convert_output}'
 
 
 def create_training():
