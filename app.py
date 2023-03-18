@@ -6,13 +6,15 @@ from typing import List, TypeVar, Dict
 
 import gradio as gr
 
+from convert import convert_lora_file_to_safetensors
+
 TITLE = "DreamBooth LoRA WebUI"
 
 working_dir = path.dirname(__file__)
 
 cache_file = path.join(working_dir, "config.cache.json")
 
-INPUTS = []
+FIELDS = []
 
 T = TypeVar("T")
 
@@ -30,7 +32,7 @@ def load_config_cache() -> dict:
 
 
 def register_input(name, block: T) -> T:
-    INPUTS.append({
+    FIELDS.append({
         'name': name,
         'block': block,
     })
@@ -38,11 +40,11 @@ def register_input(name, block: T) -> T:
 
 
 def extract_input_names() -> List[str]:
-    return [item['name'] for item in INPUTS]
+    return [item['name'] for item in FIELDS]
 
 
 def extract_inputs() -> List[any]:
-    return [item['block'] for item in INPUTS]
+    return [item['block'] for item in FIELDS]
 
 
 def extract_input_values(*args) -> Dict[str, any]:
@@ -93,12 +95,23 @@ def create_number(name: str, value: any, **kwargs) -> gr.Number:
     return register_input(name, gr.Number(**kwargs))
 
 
-def do_load(*args):
+def wrap_vargs_method_with_progress(m: str, num: int):
+    args = ''.join([f'v{i}, ' for i in range(1, num + 1)])
+
+    exec(f"""
+def wrapped_method({args}progress=gr.Progress()):
+    return {m}({args}progress=progress)
+    """)
+
+    return locals().get('wrapped_method')
+
+
+def do_load():
     data = load_config_cache()
 
     ret = []
 
-    for item in INPUTS:
+    for item in FIELDS:
         if item['name'] in data:
             ret.append(data[item['name']])
         else:
@@ -107,7 +120,7 @@ def do_load(*args):
     return ret
 
 
-def do_train(*args):
+def do_train(*args, progress=gr.Progress()):
     arg_train = [
         "accelerate",
         "launch",
@@ -129,18 +142,18 @@ def do_train(*args):
                 arg_train.append('--' + key)
                 arg_train.append(str(val))
 
+    progress(0.1, "Training")
+
     subprocess.run(arg_train, check=True)
 
-    arg_convert = [
-        "python",
-        path.join(path.dirname(__file__), "scripts", "diffusers-lora-to-safetensors.py"),
-        "--file",
-        path.join(values['output_dir'], 'pytorch_lora_weights.bin')
-    ]
+    progress(0.9, "Converting to .safetensors")
 
-    subprocess.run(arg_convert, check=True)
+    convert_lora_file_to_safetensors(
+        path.join(values['output_dir'], 'pytorch_lora_weights.bin'),
+        path.join(values['output_dir'], 'lora.safetensors'),
+    )
 
-    return 'Complete\n\nCheck: ' + path.join(values['output_dir'], 'pytorch_lora_weights_converted.safetensors')
+    return 'Done, check `lora.safetensors` at `output_dir`'
 
 
 def create_training():
@@ -189,7 +202,8 @@ def create_training():
 
             with gr.Box():
                 gr.Markdown('Output message')
-                output_message = gr.Markdown()
+                with gr.Box():
+                    output_message = gr.Markdown()
 
         with gr.Column():
             with gr.Box():
@@ -282,7 +296,7 @@ def create_training():
                         create_checkbox('enable_xformers_memory_efficient_attention', True)
 
     button_start.click(
-        fn=do_train,
+        fn=wrap_vargs_method_with_progress('do_train', len(FIELDS)),
         inputs=extract_inputs(),
         outputs=output_message
     )
@@ -296,6 +310,7 @@ def create_training():
 def create_app() -> gr.Blocks:
     with gr.Blocks(
             title=TITLE,
+            css=path.join(path.dirname(__file__), 'style.css'),
     ) as app:
         with gr.Row():
             with gr.Column():
