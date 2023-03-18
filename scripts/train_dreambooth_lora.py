@@ -552,6 +552,14 @@ def main(args):
         project_config=accelerator_project_config,
     )
 
+    progress_file = Path(args.progress_file)
+
+    def write_progress(v1: float, v2: str):
+        if accelerator.is_main_process:
+            progress_file.write_text(f'{v1}, {v2}')
+
+    write_progress(0.05, "Loading")
+
     if args.report_to == "wandb":
         if not is_wandb_available():
             raise ImportError("Make sure to install wandb if you want to use it for logging during training.")
@@ -667,6 +675,8 @@ def main(args):
         args.pretrained_model_name_or_path, subfolder="unet", revision=args.revision
     )
 
+    write_progress(0.1, "Sending to device")
+
     # We only train the additional adapter LoRA layers
     vae.requires_grad_(False)
     text_encoder.requires_grad_(False)
@@ -761,6 +771,8 @@ def main(args):
     else:
         optimizer_class = torch.optim.AdamW
 
+    write_progress(0.15, "Creating resources")
+
     # Optimizer creation
     optimizer = optimizer_class(
         lora_layers.parameters(),
@@ -822,6 +834,8 @@ def main(args):
     if accelerator.is_main_process:
         accelerator.init_trackers("dreambooth-lora", config=vars(args))
 
+    write_progress(0.2, "Starting training")
+
     # Train!
     total_batch_size = args.train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
 
@@ -866,6 +880,10 @@ def main(args):
     progress_bar.set_description("Steps")
 
     for epoch in range(first_epoch, args.num_train_epochs):
+        write_progress(
+            0.2 + 0.6 * float(epoch - first_epoch) / float(args.num_train_epochs - first_epoch),
+            f'Epoch {epoch}/{args.num_train_epochs}'
+        )
         unet.train()
         for step, batch in enumerate(train_dataloader):
             # Skip steps until we reach the resumed step
@@ -987,6 +1005,8 @@ def main(args):
 
                 del pipeline
                 torch.cuda.empty_cache()
+
+    write_progress(0.8, 'Saving LoRA')
 
     # Save the lora layers
     accelerator.wait_for_everyone()

@@ -149,7 +149,7 @@ def do_train(*args, progress=gr.Progress()):
                 arg_train.append(str(val))
 
     prg_path = tempfile.mktemp(suffix="train_dreambooth_lora.progress")
-    Path(prg_path).write_text('0, Starting')
+    os.mkfifo(prg_path)
 
     arg_train.append("--progress_file")
     arg_train.append(prg_path)
@@ -157,15 +157,11 @@ def do_train(*args, progress=gr.Progress()):
     def show_progress(_prg_path, _progress):
         p = Path(_prg_path)
         while True:
-            if not path.exists(_prg_path):
+            content = p.read_text().strip()
+            if content == 'done':
                 return
-            try:
-                content = p.read_text().strip()
-                v1, v2 = content.split(',', 2)
-                _progress(float(v1.strip()) * 0.9, v2.strip())
-            except ValueError:
-                pass
-            time.sleep(1)
+            v_p, v_desc = content.split(',', 2)
+            _progress(float(v_p.strip()) * 0.9, v_desc.strip())
 
     progress(0, "Starting")
     threading.Thread(target=show_progress, args=(prg_path, progress)).start()
@@ -175,6 +171,7 @@ def do_train(*args, progress=gr.Progress()):
     except subprocess.CalledProcessError as e:
         return str(e)
     finally:
+        Path(prg_path).write_text('done')
         os.remove(prg_path)
 
     progress(0.9, "Converting to .safetensors")
