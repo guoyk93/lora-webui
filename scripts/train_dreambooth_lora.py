@@ -881,7 +881,7 @@ def main(args):
 
     for epoch in range(first_epoch, args.num_train_epochs):
         write_progress(
-            0.2 + 0.6 * float(epoch - first_epoch) / float(args.num_train_epochs - first_epoch),
+            0.2 + 0.7 * float(epoch - first_epoch) / float(args.num_train_epochs - first_epoch),
             f'Epoch {epoch}/{args.num_train_epochs}'
         )
         unet.train()
@@ -1006,7 +1006,7 @@ def main(args):
                 del pipeline
                 torch.cuda.empty_cache()
 
-    write_progress(0.8, 'Saving LoRA')
+    write_progress(0.9, 'Saving LoRA')
 
     # Save the lora layers
     accelerator.wait_for_everyone()
