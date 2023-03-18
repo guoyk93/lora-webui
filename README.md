@@ -5,6 +5,7 @@ Gradio WebUI for LoRA Training
 ## Features
 
 * Tuning parameters
+* Showing Progress
 * Automatically converting to `Stable Diffusion WebUI` compatible `.safetensors` file
 
 ## Installation
