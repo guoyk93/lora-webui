@@ -45,16 +45,16 @@ def register_input(name, block: T) -> T:
     return block
 
 
-def extract_input_names() -> List[str]:
+def extract_field_names() -> List[str]:
     return [item['name'] for item in FIELDS]
 
 
-def extract_inputs() -> List[any]:
+def extract_fields() -> List[any]:
     return [item['block'] for item in FIELDS]
 
 
-def extract_input_values(*args) -> Dict[str, any]:
-    names = extract_input_names()
+def extract_field_values(*args) -> Dict[str, any]:
+    names = extract_field_names()
     return {name: args[idx] for idx, name in enumerate(names)}
 
 
@@ -133,7 +133,7 @@ def do_train(*args, progress=gr.Progress()):
         path.join(path.dirname(__file__), "scripts", "train_dreambooth_lora.py")
     ]
 
-    values = extract_input_values(*args)
+    values = extract_field_values(*args)
     save_config_cache(values)
 
     for key, val in values.items():
@@ -149,7 +149,7 @@ def do_train(*args, progress=gr.Progress()):
                 arg_train.append(str(val))
 
     prg_path = tempfile.mktemp(suffix="train_dreambooth_lora.progress")
-    Path(prg_path).write_text('0.01, Starting')
+    Path(prg_path).write_text('0, Starting')
 
     arg_train.append("--progress_file")
     arg_train.append(prg_path)
@@ -162,12 +162,12 @@ def do_train(*args, progress=gr.Progress()):
             try:
                 content = p.read_text().strip()
                 v1, v2 = content.split(',', 2)
-                _progress(float(v1.strip()) * 0.8 + 0.1, v2.strip())
+                _progress(float(v1.strip()) * 0.9, v2.strip())
             except ValueError:
                 pass
             time.sleep(1)
 
-    progress(0.1, "Training")
+    progress(0, "Starting")
     threading.Thread(target=show_progress, args=(prg_path, progress)).start()
 
     try:
@@ -229,7 +229,6 @@ def create_training():
             with gr.Box():
                 with gr.Row():
                     button_start = gr.Button("Start")
-                    button_load = gr.Button("Load")
 
             with gr.Box():
                 gr.Markdown('Output message')
@@ -328,13 +327,8 @@ def create_training():
 
     button_start.click(
         fn=wrap_vargs_method_with_progress('do_train', len(FIELDS)),
-        inputs=extract_inputs(),
+        inputs=extract_fields(),
         outputs=output_message
-    )
-
-    button_load.click(
-        fn=do_load,
-        outputs=extract_inputs(),
     )
 
 
@@ -347,6 +341,7 @@ def create_app() -> gr.Blocks:
             with gr.Column():
                 gr.Markdown(f'**{TITLE}**')
         create_training()
+        app.load(fn=do_load, outputs=extract_fields())
     return app
 
 
