@@ -2,6 +2,10 @@
 
 Gradio WebUI for LoRA Training
 
+## Screenshot
+
+![screenshot](screenshot.png)
+
 ## Features
 
 * Tuning parameters
@@ -23,6 +27,11 @@ Gradio WebUI for LoRA Training
   ```shell
   python app.py
   ```
+
+## References
+
+* https://github.com/huggingface/diffusers/blob/main/examples/dreambooth/train_dreambooth_lora.py
+* https://github.com/harrywang/finetune-sd/blob/main/convert-to-safetensors.py
 
 ## Donation
 
